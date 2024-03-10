@@ -8,13 +8,21 @@
 // CUDA headers
 #include <cuda_runtime.h>
 
-#ifdef _MSC_VER 
+#ifdef _MSC_VER
 // Add library dependencies if using VS
 #pragma comment(lib, "cudart_static")
 #endif
 
 namespace rscuda
 {
+    template<typename T>
+    void allocate_device_async(T** data, int element_count)
+    {
+        auto result = cudaMallocAsync(data, element_count * sizeof(T), 0);
+        if (result != cudaSuccess)
+            throw std::runtime_error("cudaMallocAsync failed status: " + result);
+    }
+
     template<typename  T>
     std::shared_ptr<T> alloc_dev(int elements)
     {
