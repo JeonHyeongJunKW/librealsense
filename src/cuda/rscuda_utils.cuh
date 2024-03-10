@@ -44,6 +44,15 @@ namespace rscuda
         return std::shared_ptr<T>(d_data, [](T* data) { cudaFree(data); });
     }
 
+    template<typename  T>
+    void make_device_copy_async(T host_source_memory, T **  device_target_memory)
+    {
+        auto res = cudaMallocAsync(device_target_memory, sizeof(T), 0);
+        if (res != cudaSuccess)
+            throw std::runtime_error("cudaMalloc failed status: " + res);
+        cudaMemcpyAsync(*device_target_memory, &host_source_memory, sizeof(T), cudaMemcpyHostToDevice);
+    }
+
     /* Given a point in 3D space, compute the corresponding pixel coordinates in an image with no distortion or forward distortion coefficients produced by the same camera */
     __device__ static void rs2_project_point_to_pixel(float pixel[2], const struct rs2_intrinsics * intrin, const float point[3])
     {
