@@ -8,6 +8,7 @@ namespace librealsense
     {
         #ifdef RS2_USE_CUDA
         cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking);
+        cudaStreamSynchronize(stream_);
         #endif
     }
 

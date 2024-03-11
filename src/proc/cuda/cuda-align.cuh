@@ -12,12 +12,10 @@ namespace librealsense
     class align_cuda_helper
     {
     public:
-        align_cuda_helper() :
-            _d_depth_in(nullptr),
-            _d_other_in(nullptr),
-            _d_aligned_out(nullptr)
+        align_cuda_helper()
         {
             cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking);
+            cudaStreamSynchronize(stream_);
         }
         ~align_cuda_helper();
 
