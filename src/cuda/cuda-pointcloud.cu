@@ -90,27 +90,27 @@ void rscuda::deproject_depth_cuda(float * points, const rs2_intrinsics & intrin,
     rs2_intrinsics* dev_intrin = 0;
     cudaError_t result;
 
-    result = cudaMallocAsync(&dev_points, count * sizeof(float) * 3, 0);
+    result = cudaMallocAsync(&dev_points, count * sizeof(float) * 3, cudaStreamPerThread);
     assert(result == cudaSuccess);
-    result = cudaMallocAsync(&dev_depth, count * sizeof(uint16_t), 0);
+    result = cudaMallocAsync(&dev_depth, count * sizeof(uint16_t), cudaStreamPerThread);
     assert(result == cudaSuccess);
-    result = cudaMallocAsync(&dev_intrin, sizeof(rs2_intrinsics), 0);
-    assert(result == cudaSuccess);
-
-    result = cudaMemcpyAsync(dev_depth, depth, count * sizeof(uint16_t), cudaMemcpyHostToDevice);
-    assert(result == cudaSuccess);
-    result = cudaMemcpyAsync(dev_intrin, &intrin, sizeof(rs2_intrinsics), cudaMemcpyHostToDevice);
+    result = cudaMallocAsync(&dev_intrin, sizeof(rs2_intrinsics), cudaStreamPerThread);
     assert(result == cudaSuccess);
 
-    kernel_deproject_depth_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK>>>(dev_points, dev_intrin, dev_depth, depth_scale);
-
-    result = cudaMemcpyAsync(points, dev_points, count * sizeof(float) * 3, cudaMemcpyDeviceToHost);
+    result = cudaMemcpyAsync(dev_depth, depth, count * sizeof(uint16_t), cudaMemcpyHostToDevice, cudaStreamPerThread);
+    assert(result == cudaSuccess);
+    result = cudaMemcpyAsync(dev_intrin, &intrin, sizeof(rs2_intrinsics), cudaMemcpyHostToDevice, cudaStreamPerThread);
     assert(result == cudaSuccess);
 
-    cudaFreeAsync(dev_points, 0);
-    cudaFreeAsync(dev_depth, 0);
-    cudaFreeAsync(dev_intrin, 0);
-    cudaStreamSynchronize(0);
+    kernel_deproject_depth_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK, 0, cudaStreamPerThread>>>(dev_points, dev_intrin, dev_depth, depth_scale);
+
+    result = cudaMemcpyAsync(points, dev_points, count * sizeof(float) * 3, cudaMemcpyDeviceToHost, cudaStreamPerThread);
+    assert(result == cudaSuccess);
+
+    cudaFreeAsync(dev_points, cudaStreamPerThread);
+    cudaFreeAsync(dev_depth, cudaStreamPerThread);
+    cudaFreeAsync(dev_intrin, cudaStreamPerThread);
+    cudaStreamSynchronize(cudaStreamPerThread);
 }
 
 #endif

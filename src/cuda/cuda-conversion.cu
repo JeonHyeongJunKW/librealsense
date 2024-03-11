@@ -238,7 +238,7 @@ void rscuda::unpack_yuy2_cuda_helper(const uint8_t* h_src, uint8_t* h_dst, int n
     allocate_device_async(&d_src, 4 * superPix);
 
     auto result =
-      cudaMemcpyAsync(d_src, h_src, 4 * superPix * sizeof(uint8_t), cudaMemcpyHostToDevice);
+      cudaMemcpyAsync(d_src, h_src, 4 * superPix * sizeof(uint8_t), cudaMemcpyHostToDevice, cudaStreamPerThread);
     assert(result == cudaSuccess);
 
     int numBlocks = superPix / RS2_CUDA_THREADS_PER_BLOCK;
@@ -256,7 +256,7 @@ void rscuda::unpack_yuy2_cuda_helper(const uint8_t* h_src, uint8_t* h_dst, int n
     case RS2_FORMAT_Y16:
         size = 2;
         allocate_device_async(&d_dst, n * size);
-        kernel_unpack_yuy2_y16_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK>>>(
+        kernel_unpack_yuy2_y16_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK, 0, cudaStreamPerThread>>>(
             d_src,
             d_dst,
             superPix);
@@ -264,7 +264,7 @@ void rscuda::unpack_yuy2_cuda_helper(const uint8_t* h_src, uint8_t* h_dst, int n
     case RS2_FORMAT_RGB8:
         size = 3;
         allocate_device_async(&d_dst, n * size);
-        kernel_unpack_yuy2_rgb8_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK>>>(
+        kernel_unpack_yuy2_rgb8_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK, 0, cudaStreamPerThread>>>(
             d_src,
             d_dst,
             superPix);
@@ -272,7 +272,7 @@ void rscuda::unpack_yuy2_cuda_helper(const uint8_t* h_src, uint8_t* h_dst, int n
     case RS2_FORMAT_BGR8:
         size = 3;
         allocate_device_async(&d_dst, n * size);
-        kernel_unpack_yuy2_bgr8_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK>>>(
+        kernel_unpack_yuy2_bgr8_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK, 0, cudaStreamPerThread>>>(
             d_src,
             d_dst,
             superPix);
@@ -280,7 +280,7 @@ void rscuda::unpack_yuy2_cuda_helper(const uint8_t* h_src, uint8_t* h_dst, int n
     case RS2_FORMAT_RGBA8:
         size = 4;
         allocate_device_async(&d_dst, n * size);
-        kernel_unpack_yuy2_rgba8_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK>>>(
+        kernel_unpack_yuy2_rgba8_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK, 0, cudaStreamPerThread>>>(
             d_src,
             d_dst,
             superPix);
@@ -288,7 +288,7 @@ void rscuda::unpack_yuy2_cuda_helper(const uint8_t* h_src, uint8_t* h_dst, int n
     case RS2_FORMAT_BGRA8:
         size = 4;
         allocate_device_async(&d_dst, n * size);
-        kernel_unpack_yuy2_bgra8_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK>>>(
+        kernel_unpack_yuy2_bgra8_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK, 0, cudaStreamPerThread>>>(
             d_src,
             d_dst,
             superPix);
@@ -299,10 +299,10 @@ void rscuda::unpack_yuy2_cuda_helper(const uint8_t* h_src, uint8_t* h_dst, int n
     result = cudaGetLastError();
     assert(result == cudaSuccess);
 
-    result = cudaMemcpyAsync(h_dst, d_dst, n * sizeof(uint8_t) * size, cudaMemcpyDeviceToHost);
-    cudaFreeAsync(d_src, 0);
-    cudaFreeAsync(d_dst, 0);
-    cudaStreamSynchronize(0);
+    result = cudaMemcpyAsync(h_dst, d_dst, n * sizeof(uint8_t) * size, cudaMemcpyDeviceToHost, cudaStreamPerThread);
+    cudaFreeAsync(d_src, cudaStreamPerThread);
+    cudaFreeAsync(d_dst, cudaStreamPerThread);
+    cudaStreamSynchronize(cudaStreamPerThread);
 
     /*	cudaEventRecord(stop);
         cudaEventSynchronize(stop);
@@ -343,23 +343,23 @@ void rscuda::y8_y8_from_y8i_cuda_helper(uint8_t* const dest[], int count, const 
     allocate_device_async(&d_dst_1, count);
 
     auto result =
-      cudaMemcpyAsync(d_src, source, count * sizeof(rscuda::y8i_pixel), cudaMemcpyHostToDevice);
+      cudaMemcpyAsync(d_src, source, count * sizeof(rscuda::y8i_pixel), cudaMemcpyHostToDevice, cudaStreamPerThread);
     assert(result == cudaSuccess);
 
-    kernel_split_frame_y8_y8_from_y8i_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK>>>(
+    kernel_split_frame_y8_y8_from_y8i_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK, 0, cudaStreamPerThread>>>(
         d_dst_0, d_dst_1, count, d_src);
 
     result = cudaGetLastError();
     assert(result == cudaSuccess);
 
-    result = cudaMemcpyAsync(a, d_dst_0, count * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+    result = cudaMemcpyAsync(a, d_dst_0, count * sizeof(uint8_t), cudaMemcpyDeviceToHost, cudaStreamPerThread);
     assert(result == cudaSuccess);
-    result = cudaMemcpyAsync(b, d_dst_1, count * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+    result = cudaMemcpyAsync(b, d_dst_1, count * sizeof(uint8_t), cudaMemcpyDeviceToHost, cudaStreamPerThread);
     assert(result == cudaSuccess);
-    cudaFreeAsync(d_src, 0);
-    cudaFreeAsync(d_dst_0, 0);
-    cudaFreeAsync(d_dst_1, 0);
-    cudaStreamSynchronize(0);
+    cudaFreeAsync(d_src, cudaStreamPerThread);
+    cudaFreeAsync(d_dst_0, cudaStreamPerThread);
+    cudaFreeAsync(d_dst_1, cudaStreamPerThread);
+    cudaStreamSynchronize(cudaStreamPerThread);
 
     /*    cudaEventRecord(stop);
         cudaEventSynchronize(stop);
@@ -403,23 +403,23 @@ void rscuda::y16_y16_from_y12i_10_cuda_helper(uint8_t* const dest[], int count, 
     allocate_device_async(&d_dst_1, count);
 
     auto result =
-      cudaMemcpyAsync(d_src, source, count * sizeof(rscuda::y12i_pixel), cudaMemcpyHostToDevice);
+      cudaMemcpyAsync(d_src, source, count * sizeof(rscuda::y12i_pixel), cudaMemcpyHostToDevice, cudaStreamPerThread);
     assert(result == cudaSuccess);
 
-    kernel_split_frame_y16_y16_from_y12i_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK>>>(
+    kernel_split_frame_y16_y16_from_y12i_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK, 0, cudaStreamPerThread>>>(
         d_dst_0, d_dst_1, count, d_src);
 
     result = cudaGetLastError();
     assert(result == cudaSuccess);
 
-    result = cudaMemcpyAsync(a, d_dst_0, count * sizeof(uint16_t), cudaMemcpyDeviceToHost);
+    result = cudaMemcpyAsync(a, d_dst_0, count * sizeof(uint16_t), cudaMemcpyDeviceToHost, cudaStreamPerThread);
     assert(result == cudaSuccess);
-    result = cudaMemcpyAsync(b, d_dst_1, count * sizeof(uint16_t), cudaMemcpyDeviceToHost);
+    result = cudaMemcpyAsync(b, d_dst_1, count * sizeof(uint16_t), cudaMemcpyDeviceToHost, cudaStreamPerThread);
     assert(result == cudaSuccess);
-    cudaFreeAsync(d_src, 0);
-    cudaFreeAsync(d_dst_0, 0);
-    cudaFreeAsync(d_dst_1, 0);
-    cudaStreamSynchronize(0);
+    cudaFreeAsync(d_src, cudaStreamPerThread);
+    cudaFreeAsync(d_dst_0, cudaStreamPerThread);
+    cudaFreeAsync(d_dst_1, cudaStreamPerThread);
+    cudaStreamSynchronize(cudaStreamPerThread);
 
     /*
     cudaEventRecord(stop);
@@ -457,17 +457,17 @@ void rscuda::unpack_z16_y8_from_sr300_inzi_cuda(uint8_t * const dest, const uint
     int numBlocks = count / RS2_CUDA_THREADS_PER_BLOCK;
 
     auto result =
-      cudaMemcpyAsync(d_src, source, count * sizeof(uint16_t), cudaMemcpyHostToDevice);
+      cudaMemcpyAsync(d_src, source, count * sizeof(uint16_t), cudaMemcpyHostToDevice, cudaStreamPerThread);
     assert(result == cudaSuccess);
 
-    kernel_z16_y8_from_sr300_inzi_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK>>>(
+    kernel_z16_y8_from_sr300_inzi_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK, 0, cudaStreamPerThread>>>(
         d_src, d_dst, count);
 
-    result = cudaMemcpyAsync(dest, d_dst, count * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+    result = cudaMemcpyAsync(dest, d_dst, count * sizeof(uint8_t), cudaMemcpyDeviceToHost, cudaStreamPerThread);
     assert(result == cudaSuccess);
-    cudaFreeAsync(d_src, 0);
-    cudaFreeAsync(d_dst, 0);
-    cudaStreamSynchronize(0);
+    cudaFreeAsync(d_src, cudaStreamPerThread);
+    cudaFreeAsync(d_dst, cudaStreamPerThread);
+    cudaStreamSynchronize(cudaStreamPerThread);
 
     /*  cudaEventRecord(stop);
         cudaEventSynchronize(stop);
@@ -501,17 +501,17 @@ void rscuda::unpack_z16_y16_from_sr300_inzi_cuda(uint16_t * const dest, const ui
 
     int numBlocks = count / RS2_CUDA_THREADS_PER_BLOCK;
 
-    auto result = cudaMemcpyAsync(d_src, source, count * sizeof(uint16_t), cudaMemcpyHostToDevice);
+    auto result = cudaMemcpyAsync(d_src, source, count * sizeof(uint16_t), cudaMemcpyHostToDevice, cudaStreamPerThread);
     assert(result == cudaSuccess);
 
-    kernel_z16_y16_from_sr300_inzi_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK>>>(
+    kernel_z16_y16_from_sr300_inzi_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK, 0, cudaStreamPerThread>>>(
         d_src, d_dst, count);
 
     result = cudaMemcpyAsync(dest, d_dst, count * sizeof(uint16_t), cudaMemcpyDeviceToHost);
-    cudaFreeAsync(d_src, 0);
-    cudaFreeAsync(d_dst, 0);
+    cudaFreeAsync(d_src, cudaStreamPerThread);
+    cudaFreeAsync(d_dst, cudaStreamPerThread);
     assert(result == cudaSuccess);
-    cudaStreamSynchronize(0);
+    cudaStreamSynchronize(cudaStreamPerThread);
 
     /*	cudaEventRecord(stop);
         cudaEventSynchronize(stop);

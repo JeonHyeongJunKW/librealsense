@@ -137,21 +137,21 @@ __global__  void kernel_replace_to_zero(uint16_t* aligned_out, const rs2_intrins
 align_cuda_helper::~align_cuda_helper()
 {
     if (_d_depth_in)
-        cudaFreeAsync(_d_depth_in, 0);
+        cudaFreeAsync(_d_depth_in, cudaStreamPerThread);
     if (_d_other_in)
-        cudaFreeAsync(_d_other_in, 0);
+        cudaFreeAsync(_d_other_in, cudaStreamPerThread);
     if (_d_aligned_out)
-        cudaFreeAsync(_d_aligned_out, 0);
+        cudaFreeAsync(_d_aligned_out, cudaStreamPerThread);
     if (_d_pixel_map)
-        cudaFreeAsync(_d_pixel_map, 0);
+        cudaFreeAsync(_d_pixel_map, cudaStreamPerThread);
 
     if (_d_other_intrinsics)
-        cudaFreeAsync(_d_other_intrinsics, 0);
+        cudaFreeAsync(_d_other_intrinsics, cudaStreamPerThread);
     if (_d_depth_intrinsics)
-        cudaFreeAsync(_d_depth_intrinsics, 0);
+        cudaFreeAsync(_d_depth_intrinsics, cudaStreamPerThread);
     if (_d_depth_other_extrinsics)
-        cudaFreeAsync(_d_depth_other_extrinsics, 0);
-    cudaStreamSynchronize(0);
+        cudaFreeAsync(_d_depth_other_extrinsics, cudaStreamPerThread);
+    cudaStreamSynchronize(cudaStreamPerThread);
 }
 
 void align_cuda_helper::align_other_to_depth(unsigned char* h_aligned_out, const uint16_t* h_depth_in,
@@ -171,14 +171,14 @@ void align_cuda_helper::align_other_to_depth(unsigned char* h_aligned_out, const
     if (!_d_depth_other_extrinsics) make_device_copy_async(h_depth_to_other, &_d_depth_other_extrinsics);
 
     if (!_d_depth_in) allocate_device_async(&_d_depth_in, aligned_pixel_count);
-    cudaMemcpyAsync(_d_depth_in, h_depth_in, depth_size, cudaMemcpyHostToDevice);
+    cudaMemcpyAsync(_d_depth_in, h_depth_in, depth_size, cudaMemcpyHostToDevice, cudaStreamPerThread);
 
     if (!_d_other_in) allocate_device_async(&_d_other_in, aligned_pixel_count);
-    cudaMemcpyAsync(_d_other_in, h_other_in, other_size, cudaMemcpyHostToDevice);
+    cudaMemcpyAsync(_d_other_in, h_other_in, other_size, cudaMemcpyHostToDevice, cudaStreamPerThread);
 
     if (!_d_aligned_out)
         allocate_device_async(&_d_aligned_out, aligned_size);
-    cudaMemsetAsync(_d_aligned_out, 0, aligned_size);
+    cudaMemsetAsync(_d_aligned_out, 0, aligned_size, cudaStreamPerThread);
 
     if (!_d_pixel_map) allocate_device_async(&_d_pixel_map, 2 * depth_pixel_count);
 
@@ -189,7 +189,7 @@ void align_cuda_helper::align_other_to_depth(unsigned char* h_aligned_out, const
         calc_block_size(h_depth_intrin.height, threads.y));
     dim3 mapping_blocks(depth_blocks.x, depth_blocks.y, 2);
 
-    kernel_map_depth_to_other<<<mapping_blocks, threads>>>(
+    kernel_map_depth_to_other<<<mapping_blocks, threads, 0, cudaStreamPerThread>>>(
         _d_pixel_map,
         _d_depth_in,
         _d_depth_intrinsics,
@@ -199,15 +199,15 @@ void align_cuda_helper::align_other_to_depth(unsigned char* h_aligned_out, const
 
     switch (other_bytes_per_pixel)
     {
-    case 1: kernel_other_to_depth<1><<<depth_blocks, threads>>>(_d_aligned_out, _d_other_in, _d_pixel_map, _d_depth_intrinsics, _d_other_intrinsics); break;
-    case 2: kernel_other_to_depth<2><<<depth_blocks, threads>>>(_d_aligned_out, _d_other_in, _d_pixel_map, _d_depth_intrinsics, _d_other_intrinsics); break;
-    case 3: kernel_other_to_depth<3><<<depth_blocks, threads>>>(_d_aligned_out, _d_other_in, _d_pixel_map, _d_depth_intrinsics, _d_other_intrinsics); break;
-    case 4: kernel_other_to_depth<4><<<depth_blocks, threads>>>(_d_aligned_out, _d_other_in, _d_pixel_map, _d_depth_intrinsics, _d_other_intrinsics); break;
+    case 1: kernel_other_to_depth<1><<<depth_blocks, threads, 0, cudaStreamPerThread>>>(_d_aligned_out, _d_other_in, _d_pixel_map, _d_depth_intrinsics, _d_other_intrinsics); break;
+    case 2: kernel_other_to_depth<2><<<depth_blocks, threads, 0, cudaStreamPerThread>>>(_d_aligned_out, _d_other_in, _d_pixel_map, _d_depth_intrinsics, _d_other_intrinsics); break;
+    case 3: kernel_other_to_depth<3><<<depth_blocks, threads, 0, cudaStreamPerThread>>>(_d_aligned_out, _d_other_in, _d_pixel_map, _d_depth_intrinsics, _d_other_intrinsics); break;
+    case 4: kernel_other_to_depth<4><<<depth_blocks, threads, 0, cudaStreamPerThread>>>(_d_aligned_out, _d_other_in, _d_pixel_map, _d_depth_intrinsics, _d_other_intrinsics); break;
     }
 
-    cudaMemcpyAsync(h_aligned_out, _d_aligned_out, aligned_size, cudaMemcpyDeviceToHost);
+    cudaMemcpyAsync(h_aligned_out, _d_aligned_out, aligned_size, cudaMemcpyDeviceToHost, cudaStreamPerThread);
 
-    cudaStreamSynchronize(0);
+    cudaStreamSynchronize(cudaStreamPerThread);
 }
 
 void align_cuda_helper::align_depth_to_other(unsigned char* h_aligned_out, const uint16_t* h_depth_in,
@@ -227,10 +227,10 @@ void align_cuda_helper::align_depth_to_other(unsigned char* h_aligned_out, const
     if (!_d_depth_other_extrinsics) make_device_copy_async(h_depth_to_other, &_d_depth_other_extrinsics);
 
     if (!_d_depth_in) allocate_device_async(&_d_depth_in, depth_pixel_count);
-    cudaMemcpyAsync(_d_depth_in, h_depth_in, depth_byte_size, cudaMemcpyHostToDevice);
+    cudaMemcpyAsync(_d_depth_in, h_depth_in, depth_byte_size, cudaMemcpyHostToDevice, cudaStreamPerThread);
 
     if (!_d_aligned_out) allocate_device_async(&_d_aligned_out, aligned_byte_size);
-    cudaMemsetAsync(_d_aligned_out, 0xff, aligned_byte_size);
+    cudaMemsetAsync(_d_aligned_out, 0xff, aligned_byte_size, cudaStreamPerThread);
 
     if (!_d_pixel_map) allocate_device_async(&_d_pixel_map, 2 * depth_pixel_count);
 
@@ -244,7 +244,7 @@ void align_cuda_helper::align_depth_to_other(unsigned char* h_aligned_out, const
         calc_block_size(h_other_intrin.height, threads.y));
     dim3 mapping_blocks(depth_blocks.x, depth_blocks.y, 2);
 
-    kernel_map_depth_to_other<<<mapping_blocks,threads>>>(
+    kernel_map_depth_to_other<<<mapping_blocks, threads, 0, cudaStreamPerThread>>>(
         _d_pixel_map,
         _d_depth_in,
         _d_depth_intrinsics,
@@ -252,20 +252,20 @@ void align_cuda_helper::align_depth_to_other(unsigned char* h_aligned_out, const
         _d_depth_other_extrinsics,
         depth_scale);
 
-    kernel_depth_to_other<<<depth_blocks,threads>>>(
+    kernel_depth_to_other<<<depth_blocks, threads, 0, cudaStreamPerThread>>>(
         (uint16_t *)_d_aligned_out,
         _d_depth_in,
         _d_pixel_map,
         _d_depth_intrinsics,
         _d_other_intrinsics);
 
-    kernel_replace_to_zero<<<other_blocks, threads>>>(
+    kernel_replace_to_zero<<<other_blocks, threads, 0, cudaStreamPerThread>>>(
         (uint16_t *)_d_aligned_out,
         _d_other_intrinsics);
 
-    cudaMemcpyAsync(h_aligned_out, _d_aligned_out, 2 * aligned_pixel_count, cudaMemcpyDeviceToHost);
+    cudaMemcpyAsync(h_aligned_out, _d_aligned_out, 2 * aligned_pixel_count, cudaMemcpyDeviceToHost, cudaStreamPerThread);
 
-    cudaStreamSynchronize(0);
+    cudaStreamSynchronize(cudaStreamPerThread);
 }
 
 #endif //RS2_USE_CUDA

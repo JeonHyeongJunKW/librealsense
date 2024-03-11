@@ -18,7 +18,7 @@ namespace rscuda
     template<typename T>
     void allocate_device_async(T** data, int element_count)
     {
-        auto result = cudaMallocAsync(data, element_count * sizeof(T), 0);
+        auto result = cudaMallocAsync(data, element_count * sizeof(T), cudaStreamPerThread);
         if (result != cudaSuccess)
             throw std::runtime_error("cudaMallocAsync failed status: " + result);
     }
@@ -47,10 +47,10 @@ namespace rscuda
     template<typename  T>
     void make_device_copy_async(T host_source_memory, T **  device_target_memory)
     {
-        auto res = cudaMallocAsync(device_target_memory, sizeof(T), 0);
+        auto res = cudaMallocAsync(device_target_memory, sizeof(T), cudaStreamPerThread);
         if (res != cudaSuccess)
             throw std::runtime_error("cudaMalloc failed status: " + res);
-        cudaMemcpyAsync(*device_target_memory, &host_source_memory, sizeof(T), cudaMemcpyHostToDevice);
+        cudaMemcpyAsync(*device_target_memory, &host_source_memory, sizeof(T), cudaMemcpyHostToDevice, cudaStreamPerThread);
     }
 
     /* Given a point in 3D space, compute the corresponding pixel coordinates in an image with no distortion or forward distortion coefficients produced by the same camera */
