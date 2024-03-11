@@ -453,7 +453,7 @@ HANDLE_EXCEPTIONS_AND_RETURN( , dev, callback )
 void rs2_trigger_device_calibration( rs2_device * dev, rs2_calibration_type type, rs2_error** error ) BEGIN_API_CALL
 {
     VALIDATE_NOT_NULL( dev );
-    
+
     auto cal = VALIDATE_INTERFACE( dev->device, librealsense::device_calibration );
 
     cal->trigger_device_calibration( type );
@@ -568,7 +568,7 @@ const rs2_raw_data_buffer* rs2_build_debug_protocol_command(rs2_device* device, 
 
     auto debug_interface = VALIDATE_INTERFACE(device->device, librealsense::debug_interface);
     auto ret_data = debug_interface->build_command(opcode, param1, param2, param3, param4, static_cast<uint8_t*>(data), size_of_data);
-    
+
     return new rs2_raw_data_buffer{ std::move(ret_data) };
 
 }
@@ -1521,7 +1521,7 @@ int rs2_is_processing_block_extendable_to(const rs2_processing_block* f, rs2_ext
     case RS2_EXTENSION_DEPTH_HUFFMAN_DECODER: throw not_implemented_exception( "deprecated" );
     case RS2_EXTENSION_HDR_MERGE: return VALIDATE_INTERFACE_NO_THROW((processing_block_interface*)(f->block.get()), librealsense::hdr_merge) != nullptr;
     case RS2_EXTENSION_SEQUENCE_ID_FILTER: return VALIDATE_INTERFACE_NO_THROW((processing_block_interface*)(f->block.get()), librealsense::sequence_id_filter) != nullptr;
-  
+
     default:
         return false;
     }
@@ -1558,7 +1558,7 @@ void rs2_context_add_software_device(rs2_context* ctx, rs2_device* dev, rs2_erro
     VALIDATE_NOT_NULL(ctx);
     VALIDATE_NOT_NULL(dev);
     auto software_dev = VALIDATE_INTERFACE(dev->device, librealsense::software_device);
-    
+
     ctx->ctx->add_software_device(software_dev->get_info());
 }
 HANDLE_EXCEPTIONS_AND_RETURN(, ctx, dev)
@@ -2432,22 +2432,22 @@ void rs2_pose_frame_get_pose_data(const rs2_frame* frame, rs2_pose* pose, rs2_er
 
     auto pf = VALIDATE_INTERFACE((frame_interface*)frame, librealsense::pose_frame);
 
-    const float3 t = pf->get_translation();
+    const librealsense::float3 t = pf->get_translation();
     pose->translation = { t.x, t.y, t.z };
 
-    const float3 v = pf->get_velocity();
+    const librealsense::float3 v = pf->get_velocity();
     pose->velocity = { v.x, v.y, v.z };
 
-    const float3 a = pf->get_acceleration();
+    const librealsense::float3 a = pf->get_acceleration();
     pose->acceleration = { a.x, a.y, a.z };
 
-    const float4 r = pf->get_rotation();
+    const librealsense::float4 r = pf->get_rotation();
     pose->rotation = { r.x, r.y, r.z, r.w };
 
-    const float3 av = pf->get_angular_velocity();
+    const librealsense::float3 av = pf->get_angular_velocity();
     pose->angular_velocity = { av.x, av.y, av.z };
 
-    const float3 aa = pf->get_angular_acceleration();
+    const librealsense::float3 aa = pf->get_angular_acceleration();
     pose->angular_acceleration = { aa.x, aa.y, aa.z };
 
     pose->tracker_confidence = pf->get_tracker_confidence();
@@ -2474,7 +2474,7 @@ void rs2_extract_target_dimensions(const rs2_frame* frame_ref, rs2_calib_target_
         target_calculator = std::make_shared<rect_gaussian_dots_target_calculator>(width, height, _roi_ws, _roi_hs, _roi_we - _roi_ws, _roi_he - _roi_hs);
     else
         throw std::runtime_error("unsupported calibration target type");
-    
+
     if (RS2_FORMAT_Y8 == fmt)
     {
         if (!target_calculator->calculate(vf->get_frame_data(), target_dims, target_dims_size))
@@ -2753,7 +2753,7 @@ void rs2_override_intrinsics( const rs2_sensor* sensor, const rs2_intrinsics* in
 {
     VALIDATE_NOT_NULL( sensor );
     VALIDATE_NOT_NULL( intrinsics );
-    
+
     auto ois = VALIDATE_INTERFACE( sensor->sensor, librealsense::calibrated_sensor );
     ois->override_intrinsics( *intrinsics );
 }
@@ -2889,8 +2889,8 @@ int rs2_get_static_node(const rs2_sensor* sensor, const char* guid, rs2_vector *
     std::string s_guid(guid);
     VALIDATE_RANGE(s_guid.size(), 1, 127);      // T2xx spec
 
-    float3 t_pos{};
-    float4 t_or {};
+    librealsense::float3 t_pos{};
+    librealsense::float4 t_or {};
     int ret = 0;
     if ((ret = pose_snr->get_static_node(s_guid, t_pos, t_or)))
     {
@@ -3247,7 +3247,7 @@ HANDLE_EXCEPTIONS_AND_RETURN(nullptr, device)
 const rs2_raw_data_buffer* rs2_get_calibration_table(const rs2_device* device, rs2_error** error) BEGIN_API_CALL
 {
     VALIDATE_NOT_NULL(device);
-   
+
     auto auto_calib = VALIDATE_INTERFACE(device->device, librealsense::auto_calibrated_interface);
     auto buffer = auto_calib->get_calibration_table();
     return new rs2_raw_data_buffer{ buffer };
@@ -3288,7 +3288,7 @@ rs2_firmware_log_message* rs2_create_fw_log_message(rs2_device* dev, rs2_error**
 {
     VALIDATE_NOT_NULL(dev);
     auto fw_logger = VALIDATE_INTERFACE(dev->device, librealsense::firmware_logger_extensions);
-    
+
     return new rs2_firmware_log_message{ std::make_shared <librealsense::fw_logs::fw_logs_binary_data>() };
 }
 HANDLE_EXCEPTIONS_AND_RETURN(nullptr, dev)
@@ -3361,7 +3361,7 @@ HANDLE_EXCEPTIONS_AND_RETURN(0, msg)
 int rs2_init_fw_log_parser(rs2_device* dev, const char* xml_content,rs2_error** error) BEGIN_API_CALL
 {
     VALIDATE_NOT_NULL(xml_content);
-    
+
     auto fw_logger = VALIDATE_INTERFACE(dev->device, librealsense::firmware_logger_extensions);
 
     return (fw_logger->init_parser(xml_content)) ? 1 : 0;
@@ -3586,7 +3586,7 @@ void rs2_deproject_pixel_to_point(float point[3], const struct rs2_intrinsics* i
 
     if (intrin->model == RS2_DISTORTION_INVERSE_BROWN_CONRADY)
     {
-        // need to loop until convergence 
+        // need to loop until convergence
         // 10 iterations determined empirically
         for (int i = 0; i < 10; i++)
         {
@@ -3602,7 +3602,7 @@ void rs2_deproject_pixel_to_point(float point[3], const struct rs2_intrinsics* i
     }
     if (intrin->model == RS2_DISTORTION_BROWN_CONRADY)
     {
-        // need to loop until convergence 
+        // need to loop until convergence
         // 10 iterations determined empirically
         for (int i = 0; i < 10; i++)
         {
@@ -3753,7 +3753,7 @@ void rs2_project_color_pixel_to_depth_pixel(float to_pixel[2],
 }
 NOEXCEPT_RETURN(, to_pixel)
 
-const rs2_raw_data_buffer* rs2_run_focal_length_calibration_cpp(rs2_device* device, rs2_frame_queue* left, rs2_frame_queue* right, float target_w, float target_h, 
+const rs2_raw_data_buffer* rs2_run_focal_length_calibration_cpp(rs2_device* device, rs2_frame_queue* left, rs2_frame_queue* right, float target_w, float target_h,
     int adjust_both_sides, float* ratio, float* angle, rs2_update_progress_callback * progress_callback, rs2_error** error) BEGIN_API_CALL
 {
     // Take ownership of the callback ASAP or else memory leaks could result if we throw! (the caller usually does a

@@ -8,7 +8,7 @@
 // CUDA headers
 #include <cuda_runtime.h>
 
-#ifdef _MSC_VER 
+#ifdef _MSC_VER
 // Add library dependencies if using VS
 #pragma comment(lib, "cudart_static")
 #endif

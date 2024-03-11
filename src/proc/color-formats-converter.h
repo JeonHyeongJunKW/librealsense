@@ -4,6 +4,9 @@
 #pragma once
 
 #include "synthetic-stream.h"
+#ifdef RS2_USE_CUDA
+#include "cuda/cuda-conversion.cuh"
+#endif
 
 namespace librealsense
 {
@@ -19,10 +22,23 @@ namespace librealsense
     public:
         yuy2_converter(rs2_format target_format) :
             yuy2_converter("YUY Converter", target_format) {};
-
+        ~yuy2_converter()
+        {
+            #ifdef RS2_USE_CUDA
+            rscuda::destroy_cuda_stream(stream_);
+            #endif
+        }
     protected:
+        #ifdef RS2_USE_CUDA
+        cudaStream_t stream_;
+        #endif
         yuy2_converter(const char* name, rs2_format target_format) :
-            color_converter(name, target_format) {};
+            color_converter(name, target_format)
+        {
+            #ifdef RS2_USE_CUDA
+            rscuda::create_cuda_stream(stream_);
+            #endif
+        };
         void process_function(byte * const dest[], const byte * source, int width, int height, int actual_size, int input_size) override;
     };
 

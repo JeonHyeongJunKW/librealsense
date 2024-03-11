@@ -1,6 +1,8 @@
 #pragma once
 #ifdef RS2_USE_CUDA
 
+#include <cuda_runtime.h>
+
 #include "../../../include/librealsense2/rs.h"
 #include <memory>
 #include <stdint.h>
@@ -13,7 +15,14 @@ namespace librealsense
         align_cuda_helper() :
             _d_depth_in(nullptr),
             _d_other_in(nullptr),
-            _d_aligned_out(nullptr) {}
+            _d_aligned_out(nullptr)
+        {
+            cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking);
+        }
+        ~align_cuda_helper()
+        {
+            cudaStreamDestroy(stream_);
+        }
 
         void align_other_to_depth(unsigned char* h_aligned_out, const uint16_t* h_depth_in,
             float depth_scale, const rs2_intrinsics& h_depth_intrin, const rs2_extrinsics& h_depth_to_other,
@@ -24,6 +33,7 @@ namespace librealsense
             const rs2_intrinsics& h_other_intrin);
 
     private:
+        cudaStream_t stream_;
         std::shared_ptr<uint16_t>       _d_depth_in;
         std::shared_ptr<unsigned char>  _d_other_in;
         std::shared_ptr<unsigned char>  _d_aligned_out;

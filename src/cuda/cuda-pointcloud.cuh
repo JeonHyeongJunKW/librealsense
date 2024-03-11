@@ -14,7 +14,7 @@
 // CUDA headers
 #include <cuda_runtime.h>
 
-#ifdef _MSC_VER 
+#ifdef _MSC_VER
 // Add library dependencies if using VS
 #pragma comment(lib, "cudart_static")
 #endif
@@ -23,7 +23,7 @@
 
 namespace rscuda
 {
-    void deproject_depth_cuda(float * points, const rs2_intrinsics & intrin, const uint16_t * depth, float depth_scale);
+    void deproject_depth_cuda(cudaStream_t stream, float * points, const rs2_intrinsics & intrin, const uint16_t * depth, float depth_scale);
 
 }
 

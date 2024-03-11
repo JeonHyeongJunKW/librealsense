@@ -223,8 +223,19 @@ __global__ void kernel_unpack_yuy2_bgra8_cuda(const uint8_t * src, uint8_t *dst,
     }
 }
 
+void rscuda::create_cuda_stream(cudaStream_t & stream) {
+    cudaError_t error = cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+    cudaStreamSynchronize(stream);
+    assert(error == cudaSuccess);
+}
 
-void rscuda::unpack_yuy2_cuda_helper(const uint8_t* h_src, uint8_t* h_dst, int n, rs2_format format)
+void rscuda::destroy_cuda_stream(cudaStream_t & stream) {
+    cudaStreamSynchronize(stream);
+    cudaError_t error = cudaStreamDestroy(stream);
+    assert(error == cudaSuccess);
+}
+
+void rscuda::unpack_yuy2_cuda_helper(cudaStream_t stream, const uint8_t* h_src, uint8_t* h_dst, int n, rs2_format format)
 {
     /*    cudaEvent_t start, stop;
         cudaEventCreate(&start);
@@ -306,7 +317,7 @@ __global__ void kernel_split_frame_y8_y8_from_y8i_cuda(uint8_t* a, uint8_t* b, i
     b[i] = source[i].r;
 }
 
-void rscuda::y8_y8_from_y8i_cuda_helper(uint8_t* const dest[], int count, const rscuda::y8i_pixel * source)
+void rscuda::y8_y8_from_y8i_cuda_helper(cudaStream_t stream, uint8_t* const dest[], int count, const rscuda::y8i_pixel * source)
 {
     /*    cudaEvent_t start, stop;
         cudaEventCreate(&start);
@@ -354,7 +365,7 @@ __global__ void kernel_split_frame_y16_y16_from_y12i_cuda(uint16_t* a, uint16_t*
 }
 
 
-void rscuda::y16_y16_from_y12i_10_cuda_helper(uint8_t* const dest[], int count, const rscuda::y12i_pixel * source)
+void rscuda::y16_y16_from_y12i_10_cuda_helper(cudaStream_t stream, uint8_t* const dest[], int count, const rscuda::y12i_pixel * source)
 {
     /*
         cudaEvent_t start, stop;
