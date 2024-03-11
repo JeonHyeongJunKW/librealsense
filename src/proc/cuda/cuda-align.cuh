@@ -19,10 +19,7 @@ namespace librealsense
         {
             cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking);
         }
-        ~align_cuda_helper()
-        {
-            cudaStreamDestroy(stream_);
-        }
+        ~align_cuda_helper();
 
         void align_other_to_depth(unsigned char* h_aligned_out, const uint16_t* h_depth_in,
             float depth_scale, const rs2_intrinsics& h_depth_intrin, const rs2_extrinsics& h_depth_to_other,
@@ -34,14 +31,14 @@ namespace librealsense
 
     private:
         cudaStream_t stream_;
-        std::shared_ptr<uint16_t>       _d_depth_in;
-        std::shared_ptr<unsigned char>  _d_other_in;
-        std::shared_ptr<unsigned char>  _d_aligned_out;
-        std::shared_ptr<int2>           _d_pixel_map;
+        uint16_t *       _d_depth_in;
+        unsigned char *  _d_other_in;
+        unsigned char *  _d_aligned_out;
+        int2 *           _d_pixel_map;
 
-        std::shared_ptr<rs2_intrinsics> _d_other_intrinsics;
-        std::shared_ptr<rs2_intrinsics> _d_depth_intrinsics;
-        std::shared_ptr<rs2_extrinsics> _d_depth_other_extrinsics;
+        rs2_intrinsics * _d_other_intrinsics;
+        rs2_intrinsics * _d_depth_intrinsics;
+        rs2_extrinsics * _d_depth_other_extrinsics;
     };
 }
 #endif // RS2_USE_CUDA
