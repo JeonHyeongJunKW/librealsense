@@ -29,14 +29,14 @@ namespace librealsense
 
     private:
         cudaStream_t stream_;
-        uint16_t *       _d_depth_in;
-        unsigned char *  _d_other_in;
-        unsigned char *  _d_aligned_out;
-        int2 *           _d_pixel_map;
+        uint16_t *       _d_depth_in = nullptr;
+        unsigned char *  _d_other_in = nullptr;
+        unsigned char *  _d_aligned_out = nullptr;
+        int2 *           _d_pixel_map = nullptr;
 
-        rs2_intrinsics * _d_other_intrinsics;
-        rs2_intrinsics * _d_depth_intrinsics;
-        rs2_extrinsics * _d_depth_other_extrinsics;
+        rs2_intrinsics * _d_other_intrinsics = nullptr;
+        rs2_intrinsics * _d_depth_intrinsics = nullptr;
+        rs2_extrinsics * _d_depth_other_extrinsics = nullptr;
     };
 }
 #endif // RS2_USE_CUDA

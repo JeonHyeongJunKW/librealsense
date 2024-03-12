@@ -33,7 +33,7 @@ namespace rscuda
             throw std::runtime_error("cudaMallocAsync failed status: " + result);
     }
 
-    template<typename  T>
+    template<typename T>
     void make_device_copy_async(T host_source_memory, T **  device_target_memory, cudaStream_t stream)
     {
         auto res = cudaMallocAsync(device_target_memory, sizeof(T), stream);
