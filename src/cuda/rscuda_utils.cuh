@@ -7,13 +7,30 @@
 // CUDA headers
 #include <cuda_runtime.h>
 
-#ifdef _MSC_VER 
+#ifdef _MSC_VER
 // Add library dependencies if using VS
 #pragma comment(lib, "cudart_static")
 #endif
 
 namespace rscuda
 {
+    template<typename T>
+    void allocate_device_async(T** data, int element_count, cudaStream_t stream)
+    {
+        auto result = cudaMallocAsync(data, element_count * sizeof(T), stream);
+        if (result != cudaSuccess)
+            throw std::runtime_error("cudaMallocAsync failed status: " + result);
+    }
+
+    template<typename T>
+    void make_device_copy_async(T host_source_memory, T **  device_target_memory, cudaStream_t stream)
+    {
+        auto res = cudaMallocAsync(device_target_memory, sizeof(T), stream);
+        if (res != cudaSuccess)
+            throw std::runtime_error("cudaMalloc failed status: " + res);
+        cudaMemcpyAsync(*device_target_memory, &host_source_memory, sizeof(T), cudaMemcpyHostToDevice, stream);
+    }
+
     template<typename  T>
     std::shared_ptr<T> alloc_dev(int elements)
     {

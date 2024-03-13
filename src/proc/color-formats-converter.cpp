@@ -44,21 +44,27 @@ bool has_avx()
 
 #endif
 
-namespace librealsense 
+namespace librealsense
 {
     /////////////////////////////
     // YUY2 unpacking routines //
     /////////////////////////////
     // This templated function unpacks YUY2 into Y8/Y16/RGB8/RGBA8/BGR8/BGRA8, depending on the compile-time parameter FORMAT.
     // It is expected that all branching outside of the loop control variable will be removed due to constant-folding.
+    #ifdef RS2_USE_CUDA
+    template<rs2_format FORMAT> void unpack_yuy2(cudaStream_t stream, byte * const d[], const byte * s, int width, int height, int actual_size)
+    {
+        auto n = width * height;
+        assert(n % 16 == 0);
+        rscuda::unpack_yuy2_cuda<FORMAT>(stream, d, s, n);
+        return;
+    }
+    #endif
+
     template<rs2_format FORMAT> void unpack_yuy2(byte * const d[], const byte * s, int width, int height, int actual_size)
     {
         auto n = width * height;
         assert(n % 16 == 0); // All currently supported color resolutions are multiples of 16 pixels. Could easily extend support to other resolutions by copying final n<16 pixels into a zero-padded buffer and recursively calling self for final iteration.
-#ifdef RS2_USE_CUDA
-        rscuda::unpack_yuy2_cuda<FORMAT>(d, s, n);
-        return;
-#endif
 #if defined __SSSE3__ && ! defined ANDROID
         static bool do_avx = has_avx();
 #ifdef __AVX2__
@@ -353,6 +359,35 @@ namespace librealsense
         }
 #endif
     }
+    #ifdef RS2_USE_CUDA
+    void unpack_yuy2(cudaStream_t stream, rs2_format dst_format, rs2_stream dst_stream, byte * const d[], const byte * s, int w, int h, int actual_size)
+    {
+        switch (dst_format)
+        {
+        case RS2_FORMAT_Y8:
+            unpack_yuy2<RS2_FORMAT_Y8>(stream, d, s, w, h, actual_size);
+            break;
+        case RS2_FORMAT_Y16:
+            unpack_yuy2<RS2_FORMAT_Y16>(stream, d, s, w, h, actual_size);
+            break;
+        case RS2_FORMAT_RGB8:
+            unpack_yuy2<RS2_FORMAT_RGB8>(stream, d, s, w, h, actual_size);
+            break;
+        case RS2_FORMAT_RGBA8:
+            unpack_yuy2<RS2_FORMAT_RGBA8>(stream, d, s, w, h, actual_size);
+            break;
+        case RS2_FORMAT_BGR8:
+            unpack_yuy2<RS2_FORMAT_BGR8>(stream, d, s, w, h, actual_size);
+            break;
+        case RS2_FORMAT_BGRA8:
+            unpack_yuy2<RS2_FORMAT_BGRA8>(stream, d, s, w, h, actual_size);
+            break;
+        default:
+            LOG_ERROR("Unsupported format for YUY2 conversion.");
+            break;
+        }
+    }
+    #endif
 
     void unpack_yuy2(rs2_format dst_format, rs2_stream dst_stream, byte * const d[], const byte * s, int w, int h, int actual_size)
     {
@@ -684,7 +719,11 @@ namespace librealsense
 
     void yuy2_converter::process_function(byte * const dest[], const byte * source, int width, int height, int actual_size, int input_size)
     {
+        #ifdef RS2_USE_CUDA
+        unpack_yuy2(stream_, _target_format, _target_stream, dest, source, width, height, actual_size);
+        #else
         unpack_yuy2(_target_format, _target_stream, dest, source, width, height, actual_size);
+        #endif
     }
 
     void uyvy_converter::process_function(byte * const dest[], const byte * source, int width, int height, int actual_size, int input_size)

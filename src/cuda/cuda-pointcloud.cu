@@ -16,7 +16,7 @@ void deproject_pixel_to_point_cuda(float points[3], const struct rs2_intrinsics 
     assert(intrin->model != RS2_DISTORTION_FTHETA); // Cannot deproject to an ftheta image
     //assert(intrin->model != RS2_DISTORTION_BROWN_CONRADY); // Cannot deproject to an brown conrady model
     float x = (pixel[0] - intrin->ppx) / intrin->fx;
-    float y = (pixel[1] - intrin->ppy) / intrin->fy;    
+    float y = (pixel[1] - intrin->ppy) / intrin->fy;
     if(intrin->model == RS2_DISTORTION_INVERSE_BROWN_CONRADY)
     {
         float r2  = x*x + y*y;
@@ -25,11 +25,11 @@ void deproject_pixel_to_point_cuda(float points[3], const struct rs2_intrinsics 
         float uy = y*f + 2*intrin->coeffs[3]*x*y + intrin->coeffs[2]*(r2 + 2*y*y);
         x = ux;
         y = uy;
-    } 
+    }
     points[0] = depth * x;
     points[1] = depth * y;
     points[2] = depth;
-    
+
 }
 
 
@@ -39,52 +39,53 @@ __global__
 void kernel_deproject_depth_cuda(float * points, const rs2_intrinsics* intrin, const uint16_t * depth, float depth_scale)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
-    
+
     if (i >= (*intrin).height * (*intrin).width) {
         return;
     }
     int stride = blockDim.x * gridDim.x;
     int a, b;
-    
+
     for (int j = i; j < (*intrin).height * (*intrin).width; j += stride) {
         b = j / (*intrin).width;
         a = j - b * (*intrin).width;
         const float pixel[] = { (float)a, (float)b };
-        deproject_pixel_to_point_cuda(points + j * 3, intrin, pixel, depth_scale * depth[j]);               
+        deproject_pixel_to_point_cuda(points + j * 3, intrin, pixel, depth_scale * depth[j]);
    }
 }
 
 
-void rscuda::deproject_depth_cuda(float * points, const rs2_intrinsics & intrin, const uint16_t * depth, float depth_scale)
+void rscuda::deproject_depth_cuda(cudaStream_t stream, float * points, const rs2_intrinsics & intrin, const uint16_t * depth, float depth_scale)
 {
     int count = intrin.height * intrin.width;
     int numBlocks = count / RS2_CUDA_THREADS_PER_BLOCK;
-    
-    float *dev_points = 0;	
+
+    float *dev_points = 0;
     uint16_t *dev_depth = 0;
     rs2_intrinsics* dev_intrin = 0;
     cudaError_t result;
 
-    result = cudaMalloc(&dev_points, count * sizeof(float) * 3);
+    result = cudaMallocAsync(&dev_points, count * sizeof(float) * 3, stream);
     assert(result == cudaSuccess);
-    result = cudaMalloc(&dev_depth, count * sizeof(uint16_t));
+    result = cudaMallocAsync(&dev_depth, count * sizeof(uint16_t), stream);
     assert(result == cudaSuccess);
-    result = cudaMalloc(&dev_intrin, sizeof(rs2_intrinsics));
+    result = cudaMallocAsync(&dev_intrin, sizeof(rs2_intrinsics), stream);
     assert(result == cudaSuccess);
-       
-    result = cudaMemcpy(dev_depth, depth, count * sizeof(uint16_t), cudaMemcpyHostToDevice);
-    assert(result == cudaSuccess); 
-    result = cudaMemcpy(dev_intrin, &intrin, sizeof(rs2_intrinsics), cudaMemcpyHostToDevice);
-    assert(result == cudaSuccess); 
-     
-    kernel_deproject_depth_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK>>>(dev_points, dev_intrin, dev_depth, depth_scale); 
 
-     result = cudaMemcpy(points, dev_points, count * sizeof(float) * 3, cudaMemcpyDeviceToHost);
-     assert(result == cudaSuccess);
+    result = cudaMemcpyAsync(dev_depth, depth, count * sizeof(uint16_t), cudaMemcpyHostToDevice, stream);
+    assert(result == cudaSuccess);
+    result = cudaMemcpyAsync(dev_intrin, &intrin, sizeof(rs2_intrinsics), cudaMemcpyHostToDevice, stream);
+    assert(result == cudaSuccess);
 
-    cudaFree(dev_points);
-    cudaFree(dev_depth);
-    cudaFree(dev_intrin);
+    kernel_deproject_depth_cuda<<<numBlocks, RS2_CUDA_THREADS_PER_BLOCK, 0, stream>>>(dev_points, dev_intrin, dev_depth, depth_scale);
+
+    result = cudaMemcpyAsync(points, dev_points, count * sizeof(float) * 3, cudaMemcpyDeviceToHost, stream);
+    assert(result == cudaSuccess);
+
+    cudaFreeAsync(dev_points, stream);
+    cudaFreeAsync(dev_depth, stream);
+    cudaFreeAsync(dev_intrin, stream);
+    cudaStreamSynchronize(stream);
 }
 
 #endif

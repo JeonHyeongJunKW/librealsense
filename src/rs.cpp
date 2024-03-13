@@ -435,7 +435,7 @@ HANDLE_EXCEPTIONS_AND_RETURN( , dev, callback )
 void rs2_trigger_device_calibration( rs2_device * dev, rs2_calibration_type type, rs2_error** error ) BEGIN_API_CALL
 {
     VALIDATE_NOT_NULL( dev );
-    
+
     auto cal = VALIDATE_INTERFACE( dev->device, librealsense::device_calibration );
 
     cal->trigger_device_calibration( type );
@@ -1469,7 +1469,7 @@ int rs2_is_processing_block_extendable_to(const rs2_processing_block* f, rs2_ext
     case RS2_EXTENSION_DEPTH_HUFFMAN_DECODER: return VALIDATE_INTERFACE_NO_THROW((processing_block_interface*)(f->block.get()), librealsense::depth_decompression_huffman) != nullptr;
     case RS2_EXTENSION_HDR_MERGE: return VALIDATE_INTERFACE_NO_THROW((processing_block_interface*)(f->block.get()), librealsense::hdr_merge) != nullptr;
     case RS2_EXTENSION_SEQUENCE_ID_FILTER: return VALIDATE_INTERFACE_NO_THROW((processing_block_interface*)(f->block.get()), librealsense::sequence_id_filter) != nullptr;
-  
+
     default:
         return false;
     }
@@ -1506,7 +1506,7 @@ void rs2_context_add_software_device(rs2_context* ctx, rs2_device* dev, rs2_erro
     VALIDATE_NOT_NULL(ctx);
     VALIDATE_NOT_NULL(dev);
     auto software_dev = VALIDATE_INTERFACE(dev->device, librealsense::software_device);
-    
+
     ctx->ctx->add_software_device(software_dev->get_info());
 }
 HANDLE_EXCEPTIONS_AND_RETURN(, ctx, dev)
@@ -2351,22 +2351,22 @@ void rs2_pose_frame_get_pose_data(const rs2_frame* frame, rs2_pose* pose, rs2_er
 
     auto pf = VALIDATE_INTERFACE((frame_interface*)frame, librealsense::pose_frame);
 
-    const float3 t = pf->get_translation();
+    const librealsense::float3 t = pf->get_translation();
     pose->translation = { t.x, t.y, t.z };
 
-    const float3 v = pf->get_velocity();
+    const librealsense::float3 v = pf->get_velocity();
     pose->velocity = { v.x, v.y, v.z };
 
-    const float3 a = pf->get_acceleration();
+    const librealsense::float3 a = pf->get_acceleration();
     pose->acceleration = { a.x, a.y, a.z };
 
-    const float4 r = pf->get_rotation();
+    const librealsense::float4 r = pf->get_rotation();
     pose->rotation = { r.x, r.y, r.z, r.w };
 
-    const float3 av = pf->get_angular_velocity();
+    const librealsense::float3 av = pf->get_angular_velocity();
     pose->angular_velocity = { av.x, av.y, av.z };
 
-    const float3 aa = pf->get_angular_acceleration();
+    const librealsense::float3 aa = pf->get_angular_acceleration();
     pose->angular_acceleration = { aa.x, aa.y, aa.z };
 
     pose->tracker_confidence = pf->get_tracker_confidence();
@@ -2644,7 +2644,7 @@ void rs2_override_intrinsics( const rs2_sensor* sensor, const rs2_intrinsics* in
 {
     VALIDATE_NOT_NULL( sensor );
     VALIDATE_NOT_NULL( intrinsics );
-    
+
     auto ois = VALIDATE_INTERFACE( sensor->sensor, librealsense::calibrated_sensor );
     ois->override_intrinsics( *intrinsics );
 }
@@ -2657,12 +2657,12 @@ void rs2_set_extrinsics(const rs2_sensor* from_sensor, const rs2_stream_profile*
     VALIDATE_NOT_NULL(to_sensor);
     VALIDATE_NOT_NULL(to_profile);
     VALIDATE_NOT_NULL(extrinsics);
-    
+
     auto from_dev = from_sensor->parent.device;
     if (!from_dev) from_dev = from_sensor->sensor->get_device().shared_from_this();
     auto to_dev = to_sensor->parent.device;
     if (!to_dev) to_dev = to_sensor->sensor->get_device().shared_from_this();
-    
+
     if (from_dev != to_dev)
     {
         LOG_ERROR("Cannot set extrinsics of two different devices \n");
@@ -2719,7 +2719,7 @@ HANDLE_EXCEPTIONS_AND_RETURN(, device)
 
 rs2_processing_block_list* rs2_get_recommended_processing_blocks(rs2_sensor* sensor, rs2_error** error) BEGIN_API_CALL
 {
-    VALIDATE_NOT_NULL(sensor);                            
+    VALIDATE_NOT_NULL(sensor);
     return new rs2_processing_block_list{ sensor->sensor->get_recommended_processing_blocks() };
 }
 HANDLE_EXCEPTIONS_AND_RETURN(nullptr, sensor)
@@ -2814,8 +2814,8 @@ int rs2_get_static_node(const rs2_sensor* sensor, const char* guid, rs2_vector *
     std::string s_guid(guid);
     VALIDATE_RANGE(s_guid.size(), 1, 127);      // T2xx spec
 
-    float3 t_pos{};
-    float4 t_or {};
+    librealsense::float3 t_pos{};
+    librealsense::float4 t_or {};
     int ret = 0;
     if ((ret = pose_snr->get_static_node(s_guid, t_pos, t_or)))
     {
@@ -3104,7 +3104,7 @@ HANDLE_EXCEPTIONS_AND_RETURN(nullptr, device)
 const rs2_raw_data_buffer* rs2_get_calibration_table(const rs2_device* device, rs2_error** error) BEGIN_API_CALL
 {
     VALIDATE_NOT_NULL(device);
-   
+
     auto auto_calib = VALIDATE_INTERFACE(device->device, librealsense::auto_calibrated_interface);
     auto buffer = auto_calib->get_calibration_table();
     return new rs2_raw_data_buffer{ buffer };
@@ -3144,7 +3144,7 @@ rs2_firmware_log_message* rs2_create_fw_log_message(rs2_device* dev, rs2_error**
 {
     VALIDATE_NOT_NULL(dev);
     auto fw_logger = VALIDATE_INTERFACE(dev->device, librealsense::firmware_logger_extensions);
-    
+
     return new rs2_firmware_log_message{ std::make_shared <librealsense::fw_logs::fw_logs_binary_data>() };
 }
 HANDLE_EXCEPTIONS_AND_RETURN(nullptr, dev)
@@ -3217,7 +3217,7 @@ HANDLE_EXCEPTIONS_AND_RETURN(0, msg)
 int rs2_init_fw_log_parser(rs2_device* dev, const char* xml_content,rs2_error** error) BEGIN_API_CALL
 {
     VALIDATE_NOT_NULL(xml_content);
-    
+
     auto fw_logger = VALIDATE_INTERFACE(dev->device, librealsense::firmware_logger_extensions);
 
     return (fw_logger->init_parser(xml_content)) ? 1 : 0;

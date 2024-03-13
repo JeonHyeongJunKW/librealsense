@@ -3,9 +3,6 @@
 
 #include "y12i-to-y16y16.h"
 #include "stream.h"
-#ifdef RS2_USE_CUDA
-#include "cuda/cuda-conversion.cuh"
-#endif
 
 namespace librealsense
 {
@@ -13,25 +10,43 @@ namespace librealsense
     void unpack_y16_y16_from_y12i_10(byte * const dest[], const byte * source, int width, int height, int actual_size)
     {
         auto count = width * height;
-#ifdef RS2_USE_CUDA
-        rscuda::split_frame_y16_y16_from_y12i_cuda(dest, count, reinterpret_cast<const y12i_pixel *>(source));
-#else
+
         split_frame(dest, count, reinterpret_cast<const y12i_pixel*>(source),
             [](const y12i_pixel & p) -> uint16_t { return p.l() << 6 | p.l() >> 4; },  // We want to convert 10-bit data to 16-bit data
             [](const y12i_pixel & p) -> uint16_t { return p.r() << 6 | p.r() >> 4; }); // Multiply by 64 1/16 to efficiently approximate 65535/1023
-#endif
     }
-
+    #ifdef RS2_USE_CUDA
+    void unpack_y16_y16_from_y12i_10(cudaStream_t stream, byte * const dest[], const byte * source, int width, int height, int actual_size)
+    {
+        auto count = width * height;
+        rscuda::split_frame_y16_y16_from_y12i_cuda(stream, dest, count, reinterpret_cast<const y12i_pixel *>(source));
+    }
+    #endif
     y12i_to_y16y16::y12i_to_y16y16(int left_idx, int right_idx)
         : y12i_to_y16y16("Y12I to Y16L Y16R Transform", left_idx, right_idx) {}
 
     y12i_to_y16y16::y12i_to_y16y16(const char * name, int left_idx, int right_idx)
         : interleaved_functional_processing_block(name, RS2_FORMAT_Y12I, RS2_FORMAT_Y16, RS2_STREAM_INFRARED, RS2_EXTENSION_VIDEO_FRAME, 1,
                                                                          RS2_FORMAT_Y16, RS2_STREAM_INFRARED, RS2_EXTENSION_VIDEO_FRAME, 2)
-    {}
+    {
+        #ifdef RS2_USE_CUDA
+        rscuda::create_cuda_stream(stream_);
+        #endif
+    }
+
+    y12i_to_y16y16::~y12i_to_y16y16()
+    {
+        #ifdef RS2_USE_CUDA
+        rscuda::destroy_cuda_stream(stream_);
+        #endif
+    }
 
     void y12i_to_y16y16::process_function(byte * const dest[], const byte * source, int width, int height, int actual_size, int input_size)
     {
+        #ifdef RS2_USE_CUDA
+        unpack_y16_y16_from_y12i_10(stream_, dest, source, width, height, actual_size);
+        #else
         unpack_y16_y16_from_y12i_10(dest, source, width, height, actual_size);
+        #endif
     }
 }
