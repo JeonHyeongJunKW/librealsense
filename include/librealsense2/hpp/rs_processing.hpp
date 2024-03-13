@@ -1150,7 +1150,7 @@ namespace rs2
     public:
         /**
         * Create hdr_merge processing block
-        * the processing merges between depth frames with 
+        * the processing merges between depth frames with
         * different sub-preset sequence ids.
         */
         hdr_merge() : filter(init()) {}

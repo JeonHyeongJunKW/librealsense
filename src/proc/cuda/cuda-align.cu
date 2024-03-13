@@ -153,7 +153,8 @@ align_cuda_helper::~align_cuda_helper()
     if (_d_depth_other_extrinsics)
         cudaFreeAsync(_d_depth_other_extrinsics, stream_);
     cudaStreamSynchronize(stream_);
-    cudaStreamDestroy(stream_);
+    std::cout << "align cuda helper is destroyed" << std::endl;
+    // cudaStreamDestroy(stream_);
 }
 
 void align_cuda_helper::align_other_to_depth(unsigned char* h_aligned_out, const uint16_t* h_depth_in,

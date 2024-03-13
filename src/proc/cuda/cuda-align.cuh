@@ -1,6 +1,7 @@
 #pragma once
 #ifdef RS2_USE_CUDA
 
+#include <iostream>
 #include <cuda_runtime.h>
 
 #include "../../../include/librealsense2/rs.h"
@@ -14,8 +15,10 @@ namespace librealsense
     public:
         align_cuda_helper()
         {
-            cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking);
-            cudaStreamSynchronize(stream_);
+            auto result = cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking);
+            std::cout << "make : "<< cudaGetErrorName(result) << std::endl;
+            result = cudaStreamSynchronize(stream_);
+            std::cout << "sync : "<< cudaGetErrorName(result) << std::endl;
         }
         ~align_cuda_helper();
 
