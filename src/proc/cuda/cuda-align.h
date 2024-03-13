@@ -13,7 +13,16 @@ namespace librealsense
     class align_cuda : public align
     {
     public:
-        align_cuda(rs2_stream align_to) : align(align_to, "Align (CUDA)") {}
+        align_cuda(rs2_stream align_to) : align(align_to, "Align (CUDA)")
+        {
+            auto result = cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking);
+            result = cudaStreamSynchronize(stream_);
+        }
+
+        ~align_cuda()
+        {
+            cudaStreamDestroy(stream_);
+        }
 
     protected:
         void reset_cache(rs2_stream from, rs2_stream to) override
@@ -35,7 +44,7 @@ namespace librealsense
 
             auto z_pixels = reinterpret_cast<const uint16_t*>(depth.get_data());
             auto& aligner = aligners[std::tuple<rs2_stream, rs2_stream>(RS2_STREAM_DEPTH, other_profile.stream_type())];
-            aligner.align_depth_to_other(aligned_data, z_pixels, z_scale, z_intrin, z_to_other, other_intrin);
+            aligner.align_depth_to_other(stream_, aligned_data, z_pixels, z_scale, z_intrin, z_to_other, other_intrin);
         }
 
         void align_other_to_z(rs2::video_frame& aligned, const rs2::video_frame& depth, const rs2::video_frame& other, float z_scale) override
@@ -43,7 +52,7 @@ namespace librealsense
             byte* aligned_data = reinterpret_cast<byte*>(const_cast<void*>(aligned.get_data()));
             auto aligned_profile = aligned.get_profile().as<rs2::video_stream_profile>();
             memset(aligned_data, 0, aligned_profile.height() * aligned_profile.width() * aligned.get_bytes_per_pixel());
-            
+
             auto depth_profile = depth.get_profile().as<rs2::video_stream_profile>();
             auto other_profile = other.get_profile().as<rs2::video_stream_profile>();
 
@@ -56,10 +65,11 @@ namespace librealsense
 
             auto& aligner = aligners[std::tuple<rs2_stream, rs2_stream>(other_profile.stream_type(), RS2_STREAM_DEPTH)];
             aligner.align_other_to_depth(
-                aligned_data, z_pixels, z_scale, z_intrin, z_to_other, other_intrin, other_pixels, other_profile.format(), other.get_bytes_per_pixel());
+                stream_, aligned_data, z_pixels, z_scale, z_intrin, z_to_other, other_intrin, other_pixels, other_profile.format(), other.get_bytes_per_pixel());
         }
 
     private:
+        cudaStream_t stream_{nullptr};
         std::map<std::tuple<rs2_stream, rs2_stream>, align_cuda_helper> aligners;
     };
 }
